@@ -25,12 +25,12 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
 
    Robotframework Historic report required following information, users must pass respective info while using parser
 
-    - -o --> output.xml file name
-    - -s --> mysql hosted machine ip address (default: localhost)
-    - -u --> mysql user name (default: superuser)
-    - -p --> mysql password (default: passw0rd)
-    - -n --> project name in robotframework historic
-    - -e --> execution info
+    -o --> output.xml file name
+    -s --> mysql hosted machine ip address (default: localhost)
+    -u --> mysql user name (default: superuser)
+    -p --> mysql password (default: passw0rd)
+    -n --> project name in robotframework historic
+    -e --> execution info
 
  - Use `robotframework-historic-parser` to parse output.xml's
 
