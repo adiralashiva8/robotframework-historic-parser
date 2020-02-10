@@ -43,6 +43,9 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
     -n "<PROJECT-NAME>"
     -e "<EXECUTION-INFO>"
    ```
+> Note: Here if MySQL hosted in:
+>  - local machine then use `localhost` Ex: -s `localhost`
+>  - other machine then use `ipaddress:3306` Ex: -s `10.30.2.150:3306`
 
    __Example:__
    ```
