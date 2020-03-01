@@ -13,20 +13,20 @@ def generate_report(opts):
     output_names = []
     # support "*.xml" of output files
     if ( opts.output == "*.xml" ):
-        for item in os.listdir(path): 
+        for item in os.listdir(path):
             if os.path.isfile(item) and item.endswith('.xml'):
                 output_names.append(item)
     else:
         for curr_name in opts.output.split(","):
             curr_path = os.path.join(path, curr_name)
             output_names.append(curr_path)
-    
-    required_files = list(output_names) 
+
+    required_files = list(output_names)
     missing_files = [filename for filename in required_files if not os.path.exists(filename)]
     if missing_files:
         # We have files missing.
         exit("output.xml file is missing: {}".format(", ".join(missing_files)))
-    
+
     # Read output.xml file
     result = ExecutionResult(*output_names)
     result.configure(stat_config={'suite_stat_level': 2,
@@ -36,7 +36,14 @@ def generate_report(opts):
 
     # connect to database
     mydb = connect_to_mysql_db(opts.host, opts.username, opts.password, opts.projectname)
-    date_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    rootdb = connect_to_mysql_db(opts.host, opts.username, opts.password, 'robothistoric')
+
+    test_stats = SuiteStats()
+    result.visit(test_stats)
+
+    stotal = test_stats.total_suite
+    spass = test_stats.passed_suite
+    sfail = test_stats.failed_suite
 
     stats = result.statistics
     total = stats.total.all.total
@@ -44,18 +51,52 @@ def generate_report(opts):
     failed = stats.total.all.failed
 
     elapsedtime = datetime.datetime(1970, 1, 1) + datetime.timedelta(milliseconds=result.suite.elapsedtime)
-    elapsedtime = get_min(elapsedtime.strftime("%X"))
+    elapsedtime = get_time_in_min(elapsedtime.strftime("%X"))
+    elapsedtime = float("{0:.2f}".format(elapsedtime))
 
     # insert test results info into db
-    result_id = insert_into_results_mysql_table(mydb, date_now, opts.executionname, total, passed, failed, elapsedtime)
-    
+    result_id = insert_into_execution_table(mydb, rootdb, opts.executionname, total, passed, failed, elapsedtime, stotal, spass, sfail, opts.projectname)
+
     logging.info("INFO: Capturing test cases results, This may take few minutes...")
+    result.visit(SuiteResults(mydb, result_id))
     result.visit(TestMetrics(mydb, result_id))
 
     logging.info("INFO: Writing execution results")
     commit_and_close_db(mydb)
 
 # other useful methods
+class SuiteStats(ResultVisitor):
+    total_suite = 0
+    passed_suite = 0
+    failed_suite = 0
+
+    def start_suite(self, suite):
+        suite_test_list = suite.tests
+        if not suite_test_list:
+            pass
+        else:
+            self.total_suite += 1
+
+            if suite.status == "PASS":
+                self.passed_suite += 1
+            else:
+                self.failed_suite += 1
+
+class SuiteResults(ResultVisitor):
+
+    def __init__(self, db, id):
+        self.db = db
+        self.id = id
+
+    def start_suite(self,suite):
+
+        suite_test_list = suite.tests
+        if not suite_test_list:
+            pass
+        else:
+            stats = suite.statistics
+            time = float("{0:.2f}".format(suite.elapsedtime / float(60000)))
+            insert_into_suite_table(self.db, self.id, str(suite), str(suite.status), int(stats.all.total), int(stats.all.passed), int(stats.all.failed), float(time))
 
 class TestMetrics(ResultVisitor):
 
@@ -65,27 +106,18 @@ class TestMetrics(ResultVisitor):
 
     def visit_test(self, test):
         name = str(test.parent) + " - " + str(test)
-        time = str(test.elapsedtime / float(60000))
+        time = float("{0:.2f}".format(test.elapsedtime / float(60000)))
         error = str(test.message)
-        insert_into_test_results_mysql_table(self.db, self.id, str(name), str(test.status), time, error)
+        insert_into_test_table(self.db, self.id, str(name), str(test.status), time, error)
 
-def get_current_date_time(format,trim):
-    t = datetime.datetime.now()
-    if t.microsecond % 1000 >= 500:  # check if there will be rounding up
-        t = t + datetime.timedelta(milliseconds=1)  # manually round up
-    if trim:
-        return t.strftime(format)[:-3]
-    else:
-        return t.strftime(format)
-
-def get_min(time_str):
+def get_time_in_min(time_str):
     h, m, s = time_str.split(':')
     ctime = int(h) * 3600 + int(m) * 60 + int(s)
-    crtime = "%.2f" % (ctime/60)
+    crtime = float("{0:.2f}".format(ctime/60))
     return crtime
 
 def connect_to_mysql_db(host, user, pwd, db):
-    try: 
+    try:
         mydb = mysql.connector.connect(
             host=host,
             user=user,
@@ -96,26 +128,38 @@ def connect_to_mysql_db(host, user, pwd, db):
     except Exception:
         print(Exception)
 
-def insert_into_results_mysql_table(con, cdate, name, total, passed, failed, ctime):
+def insert_into_execution_table(con, ocon, name, total, passed, failed, ctime, stotal, spass, sfail, projectname):
     cursorObj = con.cursor()
-    sql = "INSERT INTO results (ID, DATE, NAME, TOTAL, PASSED, FAILED, TIME) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-    val = (0, cdate, name, total, passed, failed, ctime)
+    rootCursorObj = ocon.cursor()
+    sql = "INSERT INTO TB_EXECUTION (Execution_Id, Execution_Date, Execution_Desc, Execution_Total, Execution_Pass, Execution_Fail, Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail) VALUES (%s, now(), %s, %s, %s, %s, %s, %s, %s, %s);"
+    val = (0, name, total, passed, failed, ctime, stotal, spass, sfail)
     cursorObj.execute(sql, val)
-    con.commit()
-    cursorObj.execute("select count(*) from results")
+    cursorObj.execute("SELECT Execution_Id, Execution_Pass, Execution_Total FROM TB_EXECUTION ORDER BY Execution_Id DESC LIMIT 1;")
     rows = cursorObj.fetchone()
+    con.commit()
+    # update robothistoric.tb_project table
+    rootCursorObj.execute("UPDATE tb_project SET Last_Updated = now(), Total_Executions = %s, Recent_Pass_Perc =%s WHERE Project_Name='%s';" % (rows[0], float("{0:.2f}".format((rows[1]/rows[2]*100))), projectname))
+    ocon.commit()
     return str(rows[0])
 
-def insert_into_test_results_mysql_table(con, eid, test, status, duration, msg):
+def insert_into_suite_table(con, eid, name, status, total, passed, failed, duration):
     cursorObj = con.cursor()
-    sql = "INSERT INTO test_results (ID, UID, TESTCASE, STATUS, TIME, MESSAGE) VALUES (%s, %s, %s, %s, %s, %s)"
-    val = (eid, 0, test, status, duration, msg)
+    sql = "INSERT INTO TB_SUITE (Suite_Id, Execution_Id, Suite_Name, Suite_Status, Suite_Total, Suite_Pass, Suite_Fail, Suite_Time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+    val = (0, eid, name, status, total, passed, failed, duration)
+    cursorObj.execute(sql, val)
+    # Skip commit to avoid load on db (commit once execution is done as part of close)
+    # con.commit()
+
+def insert_into_test_table(con, eid, test, status, duration, msg):
+    cursorObj = con.cursor()
+    sql = "INSERT INTO TB_TEST (Test_Id, Execution_Id, Test_Name, Test_Status, Test_Time, Test_Error) VALUES (%s, %s, %s, %s, %s, %s)"
+    val = (0, eid, test, status, duration, msg)
     cursorObj.execute(sql, val)
     # Skip commit to avoid load on db (commit once execution is done as part of close)
     # con.commit()
 
 def commit_and_close_db(db):
-    cursorObj = db.cursor()
+    # cursorObj = db.cursor()
     db.commit()
     # cursorObj.close()
     # db.close()

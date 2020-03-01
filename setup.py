@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
       name='robotframework-historic-parser',
-      version="0.1.2",
+      version="0.1.3",
       description='Parser to push robotframework execution results to MySQL',
       classifiers=[
           'Framework :: Robot Framework',
