@@ -32,7 +32,7 @@ def generate_report(opts):
     result.configure(stat_config={'suite_stat_level': 2,
                                   'tag_stat_combine': 'tagANDanother'})
 
-    logging.info("Capturing execution results, This may take few minutes...")
+    print("Capturing execution results, This may take few minutes...")
 
     # connect to database
     mydb = connect_to_mysql_db(opts.host, opts.username, opts.password, opts.projectname)
@@ -57,11 +57,12 @@ def generate_report(opts):
     # insert test results info into db
     result_id = insert_into_execution_table(mydb, rootdb, opts.executionname, total, passed, failed, elapsedtime, stotal, spass, sfail, opts.projectname)
 
-    logging.info("INFO: Capturing test cases results, This may take few minutes...")
+    print("INFO: Capturing suite results")
     result.visit(SuiteResults(mydb, result_id))
+    print("INFO: Capturing test results")
     result.visit(TestMetrics(mydb, result_id))
 
-    logging.info("INFO: Writing execution results")
+    print("INFO: Writing execution results")
     commit_and_close_db(mydb)
 
 # other useful methods
@@ -134,11 +135,13 @@ def insert_into_execution_table(con, ocon, name, total, passed, failed, ctime, s
     sql = "INSERT INTO TB_EXECUTION (Execution_Id, Execution_Date, Execution_Desc, Execution_Total, Execution_Pass, Execution_Fail, Execution_Time, Execution_STotal, Execution_SPass, Execution_SFail) VALUES (%s, now(), %s, %s, %s, %s, %s, %s, %s, %s);"
     val = (0, name, total, passed, failed, ctime, stotal, spass, sfail)
     cursorObj.execute(sql, val)
+    con.commit()
     cursorObj.execute("SELECT Execution_Id, Execution_Pass, Execution_Total FROM TB_EXECUTION ORDER BY Execution_Id DESC LIMIT 1;")
     rows = cursorObj.fetchone()
-    con.commit()
+    cursorObj.execute("SELECT COUNT(*) FROM TB_EXECUTION;")
+    execution_rows = cursorObj.fetchone()
     # update robothistoric.tb_project table
-    rootCursorObj.execute("UPDATE tb_project SET Last_Updated = now(), Total_Executions = %s, Recent_Pass_Perc =%s WHERE Project_Name='%s';" % (rows[0], float("{0:.2f}".format((rows[1]/rows[2]*100))), projectname))
+    rootCursorObj.execute("UPDATE tb_project SET Last_Updated = now(), Total_Executions = %s, Recent_Pass_Perc =%s WHERE Project_Name='%s';" % (execution_rows[0], float("{0:.2f}".format((rows[1]/rows[2]*100))), projectname))
     ocon.commit()
     return str(rows[0])
 
