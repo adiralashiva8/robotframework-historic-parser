@@ -56,6 +56,13 @@ def parse_options():
         help="Name of output.xml"
     )
 
+    general.add_argument(
+        '-g', '--ignoreresult',
+        dest='ignoreresult',
+        default="False",
+        help="Flag to ignore execution result, by this flag we can restrict storing results into mysql"
+    )
+
     args = parser.parse_args()
     return args
 

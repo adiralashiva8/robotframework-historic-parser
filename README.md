@@ -13,13 +13,13 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
 
 ## Installation
 
- - Install `robotframework-historic-parser` 
+ - Install `robotframework-historic-parser`
 
     ```
     pip install robotframework-historic-parser
     ```
 
---- 
+---
 
 ## Usage
 
@@ -31,6 +31,7 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
     -p --> mysql password (default: passw0rd)
     -n --> project name in robotframework historic
     -e --> execution info
+    -g --> ignore execution results. Helps when dont want to include results in mysql (default: False)
 
  - Use `robotframework-historic-parser` to parse output.xml's
 
@@ -44,19 +45,31 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
     -e "<EXECUTION-INFO>"
    ```
 > Note: Here if MySQL hosted in:
->  - local machine then use `localhost` Ex: -s `localhost`
->  - other machine then use `ipaddress:3306` Ex: -s `10.30.2.150:3306`
+>  - Local Machine then use `localhost` Ex: -s `localhost`
+>  - Remote Machine then use `ipaddress:3306` Ex: -s `10.30.2.150:3306`
+      - > If -s `10.30.2.150:3306` doesn't work try -s `10.30.2.150`
 
    __Example:__
    ```
    > rfhistoricparser
     -o "output1.xml"
-    -s "10.30.2.150:3306"
+    -s "10.30.2.150"
     -u "admin"
     -p "Welcome1!"
-    -n "projec1"
+    -n "project1"
     -e "Smoke test on v1.0"
    ```
+
+---
+### Ignore execution results
+
+ - You may get scenarios where you dont want to include current execution in mysql then use flag `-g` or `--ignoreresult` as follows:
+  ```
+  rfhistoricparser -g "True"
+  ```
+  > Above flag will terminate storing results into mysql
+
+  Example: you have Jenkins job where `rfhistoricparser` executes after every build, `-g` helps here to avoid storing results into mysql
 
 ---
 

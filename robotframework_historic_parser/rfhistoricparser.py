@@ -7,6 +7,10 @@ from datetime import timedelta
 
 def generate_report(opts):
 
+    if opts.ignoreresult == "True":
+        print("Ignoring execution results...")
+        return
+
     path = os.path.abspath(os.path.expanduser(opts.path))
 
     # output.xml files
