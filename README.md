@@ -38,7 +38,7 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
    ```
    > rfhistoricparser
     -o "OUTPUT.xml FILE"
-    -s "<SQL_HOSTED_IP:3306>"
+    -s "<SQL_HOSTED_IP>"
     -u "<NAME>"
     -p "<PWD>"
     -n "<PROJECT-NAME>"
@@ -46,8 +46,8 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
    ```
 > Note: Here if MySQL hosted in:
 >  - Local Machine then use `localhost` Ex: -s `localhost`
->  - Remote Machine then use `ipaddress:3306` Ex: -s `10.30.2.150:3306`
-      - > If -s `10.30.2.150:3306` doesn't work try -s `10.30.2.150`
+>  - Remote Machine then use `ipaddress` Ex: -s `10.30.2.150`
+      - > If -s `10.30.2.150` doesn't work try -s `10.30.2.150:3306`
 
    __Example:__
    ```
@@ -69,7 +69,7 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
   ```
   > Above flag will terminate storing results into mysql
 
-  Example: you have Jenkins job where `rfhistoricparser` executes after every build, `-g` helps here to avoid storing results into mysql
+  Example: You have Jenkins job where `rfhistoricparser` executes after every build, `-g` helps here to avoid storing results into mysql
 
 ---
 
