@@ -62,9 +62,9 @@ def generate_report(opts):
     result_id = insert_into_execution_table(mydb, rootdb, opts.executionname, total, passed, failed, elapsedtime, stotal, spass, sfail, opts.projectname)
 
     print("INFO: Capturing suite results")
-    result.visit(SuiteResults(mydb, result_id))
+    result.visit(SuiteResults(mydb, result_id, opts.fullsuitename))
     print("INFO: Capturing test results")
-    result.visit(TestMetrics(mydb, result_id))
+    result.visit(TestMetrics(mydb, result_id, opts.fullsuitename))
 
     print("INFO: Writing execution results")
     commit_and_close_db(mydb)
@@ -89,9 +89,10 @@ class SuiteStats(ResultVisitor):
 
 class SuiteResults(ResultVisitor):
 
-    def __init__(self, db, id):
+    def __init__(self, db, id, full_suite_name):
         self.db = db
         self.id = id
+        self.full_suite_name = full_suite_name
 
     def start_suite(self,suite):
 
@@ -99,18 +100,29 @@ class SuiteResults(ResultVisitor):
         if not suite_test_list:
             pass
         else:
+            if self.full_suite_name == "True"
+                suite_name = suite.longname
+            else:
+                suite_name = suite
+   
             stats = suite.statistics
             time = float("{0:.2f}".format(suite.elapsedtime / float(60000)))
-            insert_into_suite_table(self.db, self.id, str(suite), str(suite.status), int(stats.all.total), int(stats.all.passed), int(stats.all.failed), float(time))
+            insert_into_suite_table(self.db, self.id, str(suite_name), str(suite.status), int(stats.all.total), int(stats.all.passed), int(stats.all.failed), float(time))
 
 class TestMetrics(ResultVisitor):
 
-    def __init__(self, db, id):
+    def __init__(self, db, id, full_suite_name):
         self.db = db
         self.id = id
+        self.full_suite_name = full_suite_name
 
     def visit_test(self, test):
-        name = str(test.parent) + " - " + str(test)
+        if self.full_suite_name == "True":
+            full_suite_name = test.longname.split("." + test.name)
+            name = str(full_suite_name[0]) + " - " + str(test)
+        else:
+            name = str(test.parent) + " - " + str(test)
+
         time = float("{0:.2f}".format(test.elapsedtime / float(60000)))
         error = str(test.message)
         insert_into_test_table(self.db, self.id, str(name), str(test.status), time, error)
