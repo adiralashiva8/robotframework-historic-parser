@@ -100,7 +100,7 @@ class SuiteResults(ResultVisitor):
         if not suite_test_list:
             pass
         else:
-            if self.full_suite_name == "True"
+            if self.full_suite_name == "True":
                 suite_name = suite.longname
             else:
                 suite_name = suite
