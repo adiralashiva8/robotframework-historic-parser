@@ -16,7 +16,7 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
  - Install `robotframework-historic-parser`
 
     ```
-    pip install robotframework-historic-parser
+    pip install robotframework-historic-parser==0.2.0
     ```
 
 ---
@@ -32,6 +32,7 @@ Parser to push robotframework execution results to MySQL (for Robotframework His
     -n --> project name in robotframework historic
     -e --> execution info
     -g --> ignore execution results. Helps when dont want to include results in mysql (default: False)
+    -f --> Include full suite name (default: False)
 
  - Use `robotframework-historic-parser` to parse output.xml's
 
